@@ -15,11 +15,12 @@ module Paperclip
     def type_from_file_command
       # On BSDs, `file` doesn't give a result code of 1 if the file doesn't exist.
       type = begin
-               Paperclip.run("file", "-b --mime :file", file: @filename)
-             rescue Terrapin::CommandLineError => e
-               Paperclip.log("Error while determining content type: #{e}")
-               SENSIBLE_DEFAULT
-             end
+        MimeMagic.by_magic(File.open(@filename)).try(:type) ||
+          Paperclip.run("file", "-b --mime :file", :file => @filename)
+      rescue Errno::ENOENT => e
+        Paperclip.log("Error while determining content type: #{e}")
+        SENSIBLE_DEFAULT
+      end
 
       if type.nil? || type.match(/\(.*?\)/)
         type = SENSIBLE_DEFAULT
